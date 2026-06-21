@@ -4,6 +4,7 @@ import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import { isViewer } from '../lib/permissions';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User,
@@ -18,6 +19,7 @@ import {
 
 export default function Settings() {
   const { user } = useAuth();
+  const viewerOnly = isViewer(user);
   const [activeTab, setActiveTab] = useState('profile');
   const [toastMessage, setToastMessage] = useState('');
 
@@ -93,6 +95,36 @@ export default function Settings() {
     { id: 'notifications', label: 'Notifications', icon: <Bell className="w-4 h-4" /> },
     { id: 'preferences', label: 'Preferences', icon: <Sliders className="w-4 h-4" /> },
   ];
+
+  if (viewerOnly) {
+    return (
+      <div className="space-y-6 text-white animate-fade-in">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Account Access</h1>
+          <p className="text-xs text-[#94A3B8] mt-1 font-medium">
+            Viewer accounts are read-only and cannot modify system preferences.
+          </p>
+        </div>
+
+        <Card className="p-6 bg-[#121827]/40 border border-white/5 shadow-2xl">
+          <div className="space-y-4">
+            <div>
+              <span className="block text-[10px] uppercase font-bold text-[#94A3B8]/60">Full Name</span>
+              <span className="block text-sm font-bold text-white mt-1">{user?.full_name || 'Viewer'}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase font-bold text-[#94A3B8]/60">Email</span>
+              <span className="block text-sm font-bold text-white mt-1">{user?.email || '-'}</span>
+            </div>
+            <div>
+              <span className="block text-[10px] uppercase font-bold text-[#94A3B8]/60 mb-1.5">Role</span>
+              <Badge variant="info">{user?.role || 'VIEWER'}</Badge>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 text-white animate-fade-in relative">

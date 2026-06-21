@@ -33,23 +33,48 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchData = async () => {
-      try {
-        const [summaryRes, revenueRes, alertsRes] = await Promise.all([
-          api.get('/dashboard/summary'),
-          api.get('/dashboard/revenue-chart'),
-          api.get('/alerts/upcoming'),
-        ]);
-        setSummary(summaryRes.data.data || summaryRes.data);
-        setRevenueData(revenueRes.data.data || revenueRes.data);
-        setAlerts(alertsRes.data.data || alertsRes.data);
-      } catch (err) {
-        console.error('Failed to fetch dashboard data:', err);
-      } finally {
+      const unwrap = (response) => response.data?.data || response.data || [];
+      const [summaryRes, revenueRes, alertsRes] = await Promise.allSettled([
+        api.get('/dashboard/summary'),
+        api.get('/dashboard/revenue-chart'),
+        api.get('/alerts/upcoming', { params: { limit: 10 } }),
+      ]);
+
+      if (!isMounted) return;
+
+      if (summaryRes.status === 'fulfilled') {
+        setSummary(unwrap(summaryRes.value));
+      } else {
+        console.error('Failed to fetch dashboard summary:', summaryRes.reason);
+      }
+
+      if (revenueRes.status === 'fulfilled') {
+        const chartData = unwrap(revenueRes.value);
+        setRevenueData(Array.isArray(chartData) ? chartData : []);
+      } else {
+        console.error('Failed to fetch dashboard revenue chart:', revenueRes.reason);
+      }
+
+      if (alertsRes.status === 'fulfilled') {
+        const alertData = unwrap(alertsRes.value);
+        setAlerts(Array.isArray(alertData) ? alertData : []);
+      } else {
+        console.error('Failed to fetch dashboard alerts:', alertsRes.reason);
+      }
+
+      if (isMounted) {
         setLoading(false);
       }
     };
+
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const getGreeting = () => {

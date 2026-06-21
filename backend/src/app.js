@@ -26,7 +26,20 @@ const app = express();
 const morganFormat = process.env.NODE_ENV === "production" ? "combined" : "dev";
 app.use(morgan(morganFormat, { stream: { write: message => logger.info(message.trim()) } }));
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "script-src": ["'self'", "https://accounts.google.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+        "connect-src": ["'self'", "https://accounts.google.com"],
+        "frame-src": ["'self'", "https://accounts.google.com"],
+        "img-src": ["'self'", "data:", "https:"],
+      },
+    },
+  })
+);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -91,4 +104,3 @@ app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
 module.exports = app;
-

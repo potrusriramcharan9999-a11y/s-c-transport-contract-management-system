@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
+import { canManage, isAdmin } from '../lib/permissions';
 import { Plus, Search, FileText, Check, AlertTriangle, IndianRupee } from 'lucide-react';
 
 const STATUS_OPTIONS = ['All', 'Active', 'Pending Renewal', 'Expired', 'Terminated'];
@@ -31,6 +33,9 @@ const formatCurrency = (value) => {
 };
 
 export default function Contracts() {
+  const { user } = useAuth();
+  const canEditContracts = canManage(user);
+  const canDeleteContracts = isAdmin(user);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,14 +66,15 @@ export default function Contracts() {
   }, [page, statusFilter, search]);
 
   useEffect(() => {
-    fetchContracts();
+    void Promise.resolve().then(fetchContracts);
   }, [fetchContracts]);
 
   useEffect(() => {
-    setPage(1);
+    queueMicrotask(() => setPage(1));
   }, [statusFilter, search]);
 
   const handleDelete = async (id) => {
+    if (!canDeleteContracts) return;
     if (!window.confirm('Are you sure you want to delete this contract? This action cannot be undone.')) return;
     try {
       await api.delete(`/contracts/${id}`);
@@ -93,12 +99,14 @@ export default function Contracts() {
             Oversee corporate and institutional long-term transportation agreements.
           </p>
         </div>
-        <Link to="/contracts/new">
-          <Button variant="primary">
-            <Plus className="w-4 h-4 mr-2" />
-            New Contract
-          </Button>
-        </Link>
+        {canEditContracts && (
+          <Link to="/contracts/new">
+            <Button variant="primary">
+              <Plus className="w-4 h-4 mr-2" />
+              New Contract
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Stats Summary Strip */}
@@ -187,16 +195,28 @@ export default function Contracts() {
             <div className="text-center max-w-sm">
               <h3 className="text-sm font-bold text-white">No contracts found</h3>
               <p className="text-xs text-[#94A3B8] mt-1 leading-normal">
-                There are no transport contracts matching the filters. Create a new contract to start.
+                There are no transport contracts matching the filters.
               </p>
             </div>
-            <Link to="/contracts/new">
-              <Button size="sm" variant="primary">Create Contract</Button>
-            </Link>
+            {canEditContracts && (
+              <Link to="/contracts/new">
+                <Button size="sm" variant="primary">Create Contract</Button>
+              </Link>
+            )}
           </div>
         ) : (
           <>
-            <Table headers={['Contract No', 'Institution', 'Start Date', 'End Date', 'Billing', 'Renewal', 'Status', 'Value', 'Actions']}>
+            <Table headers={[
+              'Contract No',
+              'Institution',
+              'Start Date',
+              'End Date',
+              'Billing',
+              'Renewal',
+              'Status',
+              'Value',
+              ...(canEditContracts || canDeleteContracts ? ['Actions'] : []),
+            ]}>
               {contracts.map((c) => (
                 <tr key={c.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                   <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-[#8B7CFF] hover:text-[#A78BFA] transition-colors">
@@ -227,14 +247,20 @@ export default function Contracts() {
                   <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-white">
                     {formatCurrency(c.contract_value)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
-                    <Link to={`/contracts/${c.id}/edit`} className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors">
-                      Edit
-                    </Link>
-                    <button onClick={() => handleDelete(c.id)} className="text-red-400 hover:text-red-300 transition-colors cursor-pointer">
-                      Delete
-                    </button>
-                  </td>
+                  {(canEditContracts || canDeleteContracts) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
+                      {canEditContracts && (
+                        <Link to={`/contracts/${c.id}/edit`} className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors">
+                          Edit
+                        </Link>
+                      )}
+                      {canDeleteContracts && (
+                        <button onClick={() => handleDelete(c.id)} className="text-red-400 hover:text-red-300 transition-colors cursor-pointer">
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </Table>

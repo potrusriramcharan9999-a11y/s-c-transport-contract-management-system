@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -7,7 +8,8 @@ import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
-import { Plus, Search, Bus, Edit2, Trash2 } from 'lucide-react';
+import { canManage, isAdmin } from '../lib/permissions';
+import { Plus, Search, Bus } from 'lucide-react';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
@@ -18,6 +20,9 @@ const formatDate = (dateStr) => {
 };
 
 export default function Vehicles() {
+  const { user } = useAuth();
+  const canEditVehicles = canManage(user);
+  const canDeleteVehicles = isAdmin(user);
   const [vehicles, setVehicles] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,10 +69,11 @@ export default function Vehicles() {
   }, [contractFilter]);
 
   useEffect(() => {
-    fetchData();
+    void Promise.resolve().then(fetchData);
   }, [fetchData]);
 
   const openAddModal = () => {
+    if (!canEditVehicles) return;
     setEditingVehicle(null);
     setFormData({
       contract_id: contracts[0]?.id || '',
@@ -83,6 +89,7 @@ export default function Vehicles() {
   };
 
   const openEditModal = (vehicle) => {
+    if (!canEditVehicles) return;
     setEditingVehicle(vehicle);
     setFormData({
       contract_id: vehicle.contract_id || '',
@@ -98,6 +105,7 @@ export default function Vehicles() {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteVehicles) return;
     if (!window.confirm('Are you sure you want to delete this vehicle?')) return;
     try {
       await api.delete(`/vehicles/${id}`);
@@ -114,6 +122,7 @@ export default function Vehicles() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEditVehicles) return;
     setSubmitting(true);
     setError('');
 
@@ -153,14 +162,16 @@ export default function Vehicles() {
             Monitor registration details, capacity allocation, insurance timelines, and system compliance status.
           </p>
         </div>
-        <Button
-          onClick={openAddModal}
-          variant="primary"
-          className="self-start sm:self-center"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Vehicle
-        </Button>
+        {canEditVehicles && (
+          <Button
+            onClick={openAddModal}
+            variant="primary"
+            className="self-start sm:self-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Vehicle
+          </Button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -220,7 +231,16 @@ export default function Vehicles() {
             </div>
           </div>
         ) : (
-          <Table headers={['Vehicle No', 'Type', 'Capacity', 'Insurance Expiry', 'Fitness Expiry', 'Contract No', 'Status', 'Actions']}>
+          <Table headers={[
+            'Vehicle No',
+            'Type',
+            'Capacity',
+            'Insurance Expiry',
+            'Fitness Expiry',
+            'Contract No',
+            'Status',
+            ...(canEditVehicles || canDeleteVehicles ? ['Actions'] : []),
+          ]}>
             {filteredVehicles.map((v) => (
               <tr key={v.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                 <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-white">
@@ -246,20 +266,26 @@ export default function Vehicles() {
                     {v.status}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
-                  <button
-                    onClick={() => openEditModal(v)}
-                    className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(v.id)}
-                    className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                </td>
+                {(canEditVehicles || canDeleteVehicles) && (
+                  <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
+                    {canEditVehicles && (
+                      <button
+                        onClick={() => openEditModal(v)}
+                        className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {canDeleteVehicles && (
+                      <button
+                        onClick={() => handleDelete(v.id)}
+                        className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </Table>
@@ -267,6 +293,7 @@ export default function Vehicles() {
       </div>
 
       {/* Add / Edit Vehicle Modal */}
+      {canEditVehicles && (
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingVehicle ? 'Edit Vehicle' : 'Add Vehicle'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Select
@@ -360,6 +387,7 @@ export default function Vehicles() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }

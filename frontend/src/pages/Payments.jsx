@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import StatCard from '../components/ui/StatCard';
+import { canManage } from '../lib/permissions';
 import { FileText, CheckCircle2, Clock, AlertTriangle, Search } from 'lucide-react';
 
 const STATUS_OPTIONS = ['All', 'Unpaid', 'Paid', 'Overdue'];
@@ -31,6 +33,8 @@ const formatCurrency = (value) => {
 };
 
 export default function Payments() {
+  const { user } = useAuth();
+  const canUpdatePayments = canManage(user);
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -58,10 +62,11 @@ export default function Payments() {
   }, [statusFilter, search]);
 
   useEffect(() => {
-    fetchPayments();
+    void Promise.resolve().then(fetchPayments);
   }, [fetchPayments]);
 
   const handleMarkPaid = async (id) => {
+    if (!canUpdatePayments) return;
     setMarkingId(id);
     try {
       await api.patch(`/payments/${id}/status`, { payment_status: 'PAID' });
@@ -192,7 +197,15 @@ export default function Payments() {
             </div>
           </div>
         ) : (
-          <Table headers={['Invoice No.', 'Contract', 'Institution', 'Amount', 'Due Date', 'Status', 'Actions']}>
+          <Table headers={[
+            'Invoice No.',
+            'Contract',
+            'Institution',
+            'Amount',
+            'Due Date',
+            'Status',
+            ...(canUpdatePayments ? ['Actions'] : []),
+          ]}>
             {payments.map((p) => {
               const statusVal = p.payment_status || p.status;
               return (
@@ -223,20 +236,22 @@ export default function Payments() {
                       {statusVal}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {(statusVal === 'UNPAID' || statusVal === 'OVERDUE') ? (
-                      <Button
-                        size="sm"
-                        variant="success"
-                        onClick={() => handleMarkPaid(p.id)}
-                        disabled={markingId === p.id}
-                      >
-                        {markingId === p.id ? 'Saving...' : 'Mark Paid'}
-                      </Button>
-                    ) : (
-                      <span className="text-[#94A3B8]/30 text-xs font-semibold">—</span>
-                    )}
-                  </td>
+                  {canUpdatePayments && (
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {(statusVal === 'UNPAID' || statusVal === 'OVERDUE') ? (
+                        <Button
+                          size="sm"
+                          variant="success"
+                          onClick={() => handleMarkPaid(p.id)}
+                          disabled={markingId === p.id}
+                        >
+                          {markingId === p.id ? 'Saving...' : 'Mark Paid'}
+                        </Button>
+                      ) : (
+                        <span className="text-[#94A3B8]/30 text-xs font-semibold">-</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               );
             })}

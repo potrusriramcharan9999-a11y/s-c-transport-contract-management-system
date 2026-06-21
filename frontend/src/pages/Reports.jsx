@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import StatCard from '../components/ui/StatCard';
 import ChartCard from '../components/ui/ChartCard';
+import { canManage } from '../lib/permissions';
 import { 
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend
@@ -14,9 +16,7 @@ import {
   FileText, 
   RefreshCw, 
   AlertTriangle, 
-  Bell, 
-  CheckCircle2, 
-  Clock 
+  Bell
 } from 'lucide-react';
 
 const formatCurrency = (value) => {
@@ -25,6 +25,8 @@ const formatCurrency = (value) => {
 };
 
 export default function Reports() {
+  const { user } = useAuth();
+  const canExportReports = canManage(user);
   const [revenueTrend, setRevenueTrend] = useState([]);
   const [contractStatus, setContractStatus] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -57,7 +59,7 @@ export default function Reports() {
   }, [startDate, endDate]);
 
   useEffect(() => {
-    fetchReports();
+    void Promise.resolve().then(fetchReports);
   }, [fetchReports]);
 
   // Load summary KPI numbers
@@ -129,22 +131,24 @@ export default function Reports() {
             Review organizational metrics, financial trends, and contract distribution profiles.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={handleExportCSV}
-            variant="secondary"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export CSV
-          </Button>
-          <Button
-            onClick={handleExportPDF}
-            variant="primary"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Export PDF
-          </Button>
-        </div>
+        {canExportReports && (
+          <div className="flex gap-2">
+            <Button
+              onClick={handleExportCSV}
+              variant="secondary"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export CSV
+            </Button>
+            <Button
+              onClick={handleExportPDF}
+              variant="primary"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export PDF
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* KPI Cards */}

@@ -1,11 +1,8 @@
-import { useState } from "react";
-import { FcGoogle } from "react-icons/fc";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { Bus, Sparkles } from "lucide-react";
-
-import { Button } from "@/components/shadcn/button";
-import { Input } from "@/components/shadcn/input";
+import { Bus } from "lucide-react";
+import { isGoogleAuthConfigured, renderGoogleButton } from "@/lib/googleIdentity";
 
 interface Signup1Props {
   heading?: string;
@@ -23,10 +20,6 @@ interface Signup1Props {
 
 const Signup1 = ({
   heading = "Create an Account",
-  logo = {
-    url: "/",
-  },
-  googleText = "Sign up with Google",
   signupText = "Create an account",
   loginText = "Already have an account?",
   loginUrl = "/login",
@@ -34,13 +27,65 @@ const Signup1 = ({
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("STAFF");
+  const [role, setRole] = useState("");
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
   
-  const { register } = useAuth();
+  const { register, googleRegister, logout } = useAuth();
   const navigate = useNavigate();
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+  const canUseGoogleSignup = Boolean(fullName.trim() && role);
+
+  const handleGoogleCallback = useCallback(async (response: { credential?: string }) => {
+    setError("");
+    setSuccessMsg("");
+    setSubmitting(true);
+    try {
+      if (!response.credential) {
+        throw new Error("Google did not return a credential token.");
+      }
+      if (!fullName.trim() || !role) {
+        throw new Error("Enter your full name and choose a role before continuing with Google.");
+      }
+      await googleRegister(response.credential, {
+        full_name: fullName.trim(),
+        role,
+      });
+      logout();
+      setSuccessMsg("Account created with Google successfully! Redirecting to login...");
+      setTimeout(() => {
+        navigate("/login");
+      }, 1500);
+    } catch (err: any) {
+      setError(err.response?.data?.message || err.message || "Google Sign-In failed. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [fullName, googleRegister, logout, navigate, role]);
+
+  useEffect(() => {
+    if (!isGoogleAuthConfigured || !canUseGoogleSignup) return;
+
+    let isMounted = true;
+
+    renderGoogleButton({
+      element: googleButtonRef.current,
+      callback: (response: { credential?: string }) => {
+        if (isMounted) handleGoogleCallback(response);
+      },
+      text: "signup_with",
+    }).catch((err: Error) => {
+      if (isMounted) {
+        console.error("Failed to initialize Google Sign-In:", err);
+        setError("Google Sign-In could not be loaded. Please refresh and try again.");
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [canUseGoogleSignup, handleGoogleCallback]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +95,7 @@ const Signup1 = ({
     
     try {
       await register(fullName, email, password, role);
+      logout();
       setSuccessMsg("Account created successfully! Redirecting...");
       setTimeout(() => {
         navigate("/login");
@@ -80,7 +126,7 @@ const Signup1 = ({
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6">
+          <form onSubmit={handleSubmit} className="flex w-full flex-col gap-6" autoComplete="off">
             <div className="flex flex-col gap-4">
               
               {/* Status Messages */}
@@ -97,8 +143,10 @@ const Signup1 = ({
 
               <div className="flex flex-col gap-2">
                 <input
+                  name="transport-register-full-name"
                   type="text"
                   placeholder="Full Name"
+                  autoComplete="off"
                   required
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
@@ -108,8 +156,10 @@ const Signup1 = ({
 
               <div className="flex flex-col gap-2">
                 <input
+                  name="transport-register-email"
                   type="email"
                   placeholder="Email"
+                  autoComplete="off"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -119,8 +169,10 @@ const Signup1 = ({
 
               <div className="flex flex-col gap-2">
                 <input
+                  name="transport-register-password"
                   type="password"
                   placeholder="Password"
+                  autoComplete="new-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -141,6 +193,7 @@ const Signup1 = ({
                     backgroundRepeat: 'no-repeat',
                   }}
                 >
+                  <option value="" disabled className="bg-[#121827] text-white">Select Role</option>
                   <option value="STAFF" className="bg-[#121827] text-white">Staff</option>
                   <option value="ADMIN" className="bg-[#121827] text-white">Admin</option>
                   <option value="VIEWER" className="bg-[#121827] text-white">Viewer</option>
@@ -155,13 +208,26 @@ const Signup1 = ({
                 >
                   {submitting ? "Registering..." : signupText}
                 </button>
-                <button 
-                  type="button" 
-                  className="w-full py-2.5 bg-[#121827] border border-white/10 text-[#94A3B8] text-xs font-bold rounded-2xl hover:bg-white/5 hover:text-white transition-all cursor-pointer flex items-center justify-center gap-2"
-                >
-                  <FcGoogle className="size-4" />
-                  {googleText}
-                </button>
+                <div className="my-1 flex items-center justify-between">
+                  <span className="w-1/5 border-b border-white/10" />
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-[#94A3B8]">or</span>
+                  <span className="w-1/5 border-b border-white/10" />
+                </div>
+                {isGoogleAuthConfigured && canUseGoogleSignup ? (
+                  <div className="flex justify-center w-full">
+                    <div ref={googleButtonRef} id="google-signup-btn" className="w-full flex justify-center min-h-10" />
+                  </div>
+                ) : (
+                  <div className="flex justify-center w-full">
+                    <button
+                      type="button"
+                      disabled
+                      className="w-full py-2.5 bg-[#121827] border border-white/10 text-[#94A3B8] text-xs font-bold rounded-2xl opacity-60 flex items-center justify-center gap-2"
+                    >
+                      {isGoogleAuthConfigured ? "Enter name and role first" : "Google Sign-In unavailable"}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </form>

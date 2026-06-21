@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
-import { Bus, KeyRound } from 'lucide-react';
+import { Bus } from 'lucide-react';
+import { isGoogleAuthConfigured, renderGoogleButton } from '../lib/googleIdentity';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -12,12 +13,52 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const { user, login } = useAuth();
+  const { user, login, googleLogin } = useAuth();
   const navigate = useNavigate();
+  const googleButtonRef = useRef(null);
 
   useEffect(() => {
     if (user) navigate('/', { replace: true });
   }, [user, navigate]);
+
+  const handleGoogleCallback = useCallback(async (response) => {
+    setError('');
+    setSubmitting(true);
+    try {
+      if (!response.credential) {
+        throw new Error('Google did not return a credential token.');
+      }
+      await googleLogin(response.credential);
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Google Sign-In failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }, [googleLogin, navigate]);
+
+  useEffect(() => {
+    if (!isGoogleAuthConfigured) return;
+
+    let isMounted = true;
+
+    renderGoogleButton({
+      element: googleButtonRef.current,
+      callback: (response) => {
+        if (isMounted) handleGoogleCallback(response);
+      },
+      text: 'signin_with',
+    }).catch((err) => {
+      if (isMounted) {
+        console.error('Failed to initialize Google Sign-In:', err);
+        setError('Google Sign-In could not be loaded. Please refresh and try again.');
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [handleGoogleCallback]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +79,7 @@ export default function Login() {
       {/* Background ambient lighting glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#8B7CFF]/5 rounded-full blur-3xl" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#A78BFA]/5 rounded-full blur-3xl" />
-      
+
       <Card className="w-full max-w-sm p-8 bg-[#121827]/70 border border-white/5 shadow-2xl backdrop-blur-md relative z-10">
         {/* Header */}
         <div className="text-center mb-8">
@@ -56,17 +97,19 @@ export default function Login() {
         {/* Error message */}
         {error && (
           <div className="mb-6 p-4 bg-red-950/20 border border-red-500/20 text-red-400 text-xs font-bold rounded-2xl animate-fade-in flex items-start gap-2">
-            <span>⚠️</span>
+            <span>!</span>
             <span>{error}</span>
           </div>
         )}
 
         {/* Login form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
           <Input
             id="email"
+            name="transport-login-email"
             label="Email Address"
             type="email"
+            autoComplete="off"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -88,11 +131,13 @@ export default function Login() {
             </div>
             <Input
               id="password"
+              name="transport-login-password"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="Password"
             />
           </div>
 
@@ -105,6 +150,28 @@ export default function Login() {
             {submitting ? 'Signing in...' : 'Sign In'}
           </Button>
         </form>
+
+        <div className="my-5 flex items-center justify-between">
+          <span className="w-1/5 border-b border-white/10" />
+          <span className="text-[10px] uppercase font-bold tracking-wider text-[#94A3B8]">or continue with</span>
+          <span className="w-1/5 border-b border-white/10" />
+        </div>
+
+        {isGoogleAuthConfigured ? (
+          <div className="flex justify-center w-full">
+            <div ref={googleButtonRef} id="google-signin-btn" className="w-full flex justify-center min-h-10" />
+          </div>
+        ) : (
+          <div className="flex justify-center w-full">
+            <button
+              type="button"
+              disabled
+              className="w-full py-2.5 bg-[#121827] border border-white/10 text-[#94A3B8] text-xs font-bold rounded-2xl opacity-60 flex items-center justify-center gap-2"
+            >
+              Google Sign-In unavailable
+            </button>
+          </div>
+        )}
 
         <div className="mt-6 text-center text-xs text-[#94A3B8] font-medium">
           Don't have an account?{' '}
