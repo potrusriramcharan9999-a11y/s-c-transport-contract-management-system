@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
-import { Calendar, AlertCircle } from 'lucide-react';
+import { canManage } from '../lib/permissions';
+import { AlertCircle } from 'lucide-react';
 
 const BILLING_CYCLES = [
   { value: 'MONTHLY', label: 'Monthly' },
@@ -45,6 +47,8 @@ const formatDate = (dateStr) => {
 export default function ContractForm() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEditContracts = canManage(user);
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState(emptyForm);
@@ -56,6 +60,8 @@ export default function ContractForm() {
 
   // Load institutions dropdown
   useEffect(() => {
+    if (!canEditContracts) return;
+
     api.get('/institutions')
       .then((res) => {
         const body = res.data.data || res.data;
@@ -63,31 +69,46 @@ export default function ContractForm() {
         setInstitutions(Array.isArray(items) ? items : []);
       })
       .catch(() => setInstitutions([]));
-  }, []);
+  }, [canEditContracts]);
 
   // Load contract for editing
   useEffect(() => {
+    if (!canEditContracts) return;
     if (!isEdit) return;
-    setFetching(true);
-    api.get(`/contracts/${id}`)
-      .then((res) => {
-        const c = res.data.contract || res.data.data || res.data;
-        setForm({
-          institution_id: c.institution_id || '',
-          contract_number: c.contract_number || '',
-          start_date: c.start_date ? c.start_date.slice(0, 10) : '',
-          end_date: c.end_date ? c.end_date.slice(0, 10) : '',
-          renewal_date: c.renewal_date ? c.renewal_date.slice(0, 10) : '',
-          billing_cycle: c.billing_cycle || '',
-          contract_value: c.contract_value || '',
-          notes: c.notes || '',
-          status: c.status || 'ACTIVE',
-          created_at: c.created_at || '',
+    let active = true;
+
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      setFetching(true);
+      api.get(`/contracts/${id}`)
+        .then((res) => {
+          if (!active) return;
+          const c = res.data.contract || res.data.data || res.data;
+          setForm({
+            institution_id: c.institution_id || '',
+            contract_number: c.contract_number || '',
+            start_date: c.start_date ? c.start_date.slice(0, 10) : '',
+            end_date: c.end_date ? c.end_date.slice(0, 10) : '',
+            renewal_date: c.renewal_date ? c.renewal_date.slice(0, 10) : '',
+            billing_cycle: c.billing_cycle || '',
+            contract_value: c.contract_value || '',
+            notes: c.notes || '',
+            status: c.status || 'ACTIVE',
+            created_at: c.created_at || '',
+          });
+        })
+        .catch((err) => {
+          if (active) setServerError(err.response?.data?.message || 'Failed to load contract.');
+        })
+        .finally(() => {
+          if (active) setFetching(false);
         });
-      })
-      .catch((err) => setServerError(err.response?.data?.message || 'Failed to load contract.'))
-      .finally(() => setFetching(false));
-  }, [id, isEdit]);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [canEditContracts, id, isEdit]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -132,6 +153,7 @@ export default function ContractForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEditContracts) return;
     if (!validate()) return;
     setLoading(true);
     setServerError('');
@@ -153,11 +175,29 @@ export default function ContractForm() {
     }
   };
 
-  if (fetching) {
+  if (fetching && canEditContracts) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-3 bg-[#121827]/40 border border-white/5 rounded-3xl">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B7CFF]" />
         <p className="text-xs text-[#94A3B8] font-bold">Fetching contract data...</p>
+      </div>
+    );
+  }
+
+  if (!canEditContracts) {
+    return (
+      <div className="max-w-3xl mx-auto space-y-4 text-white animate-fade-in">
+        <Card className="p-6 bg-[#121827]/40 border border-white/5 shadow-2xl">
+          <h1 className="text-lg font-bold text-white">Read-only access</h1>
+          <p className="text-xs text-[#94A3B8] mt-2 font-medium">
+            Viewer accounts can inspect contract records but cannot create or edit agreements.
+          </p>
+          <div className="mt-5">
+            <Button type="button" variant="secondary" onClick={() => navigate('/contracts')}>
+              Back to Contracts
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }

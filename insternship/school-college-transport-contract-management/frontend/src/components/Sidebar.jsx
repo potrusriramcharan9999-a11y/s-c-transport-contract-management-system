@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isViewer } from '../lib/permissions';
 import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
@@ -60,11 +61,11 @@ export default function Sidebar({ open, onClose }) {
       label: 'Reports',
       icon: <BarChart3 className="w-5 h-5" />,
     },
-    {
+    ...(!isViewer(user) ? [{
       to: '/settings',
       label: 'Settings',
       icon: <Settings className="w-5 h-5" />,
-    },
+    }] : []),
   ];
 
   if (user?.role === 'ADMIN') {

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -7,7 +8,8 @@ import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
-import { Plus, Search, Building2, Edit2, Trash2 } from 'lucide-react';
+import { canManage, isAdmin } from '../lib/permissions';
+import { Plus, Search, Building2 } from 'lucide-react';
 
 const EMPTY_FORM = {
   institution_name: '',
@@ -21,6 +23,9 @@ const EMPTY_FORM = {
 };
 
 export default function Institutions() {
+  const { user } = useAuth();
+  const canEditInstitutions = canManage(user);
+  const canDeleteInstitutions = isAdmin(user);
   // --- State ---
   const [institutions, setInstitutions] = useState([]);
   const [page, setPage] = useState(1);
@@ -54,15 +59,16 @@ export default function Institutions() {
   }, [page, search]);
 
   useEffect(() => {
-    fetchInstitutions();
+    void Promise.resolve().then(fetchInstitutions);
   }, [fetchInstitutions]);
 
   useEffect(() => {
-    setPage(1);
+    queueMicrotask(() => setPage(1));
   }, [search]);
 
   // --- Modal helpers ---
   const openCreateModal = () => {
+    if (!canEditInstitutions) return;
     setEditingId(null);
     setForm(EMPTY_FORM);
     setFormError('');
@@ -70,6 +76,7 @@ export default function Institutions() {
   };
 
   const openEditModal = (inst) => {
+    if (!canEditInstitutions) return;
     setEditingId(inst.id);
     setForm({
       institution_name: inst.institution_name || '',
@@ -95,6 +102,7 @@ export default function Institutions() {
   // --- Save (create / update) ---
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!canEditInstitutions) return;
     setSaving(true);
     setFormError('');
     try {
@@ -116,6 +124,7 @@ export default function Institutions() {
 
   // --- Delete ---
   const handleDelete = async (id) => {
+    if (!canDeleteInstitutions) return;
     if (!window.confirm('Are you sure you want to delete this institution? This will delete all linked contracts.')) {
       return;
     }
@@ -143,14 +152,16 @@ export default function Institutions() {
             Manage school and college partnerships, contact profiles, and billing locations.
           </p>
         </div>
-        <Button
-          onClick={openCreateModal}
-          variant="primary"
-          className="self-start sm:self-center"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Institution
-        </Button>
+        {canEditInstitutions && (
+          <Button
+            onClick={openCreateModal}
+            variant="primary"
+            className="self-start sm:self-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Institution
+          </Button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -188,7 +199,15 @@ export default function Institutions() {
           </div>
         ) : (
           <div className="space-y-4">
-            <Table headers={['Name', 'Type', 'Contact Person', 'Phone', 'City', 'Status', 'Actions']}>
+            <Table headers={[
+              'Name',
+              'Type',
+              'Contact Person',
+              'Phone',
+              'City',
+              'Status',
+              ...(canEditInstitutions || canDeleteInstitutions ? ['Actions'] : []),
+            ]}>
               {institutions.map((inst) => (
                 <tr key={inst.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                   <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-white">
@@ -213,20 +232,26 @@ export default function Institutions() {
                       {inst.status || 'ACTIVE'}
                     </Badge>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
-                    <button
-                      onClick={() => openEditModal(inst)}
-                      className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors cursor-pointer flex-inline items-center gap-1"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(inst.id)}
-                      className="text-red-400 hover:text-red-300 transition-colors cursor-pointer flex-inline items-center gap-1"
-                    >
-                      Delete
-                    </button>
-                  </td>
+                  {(canEditInstitutions || canDeleteInstitutions) && (
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
+                      {canEditInstitutions && (
+                        <button
+                          onClick={() => openEditModal(inst)}
+                          className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors cursor-pointer flex-inline items-center gap-1"
+                        >
+                          Edit
+                        </button>
+                      )}
+                      {canDeleteInstitutions && (
+                        <button
+                          onClick={() => handleDelete(inst.id)}
+                          className="text-red-400 hover:text-red-300 transition-colors cursor-pointer flex-inline items-center gap-1"
+                        >
+                          Delete
+                        </button>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </Table>
@@ -262,6 +287,7 @@ export default function Institutions() {
       </div>
 
       {/* Create / Edit Modal */}
+      {canEditInstitutions && (
       <Modal isOpen={modalOpen} onClose={closeModal} title={editingId ? 'Edit Institution' : 'Add Institution'}>
         {formError && (
           <div className="mb-4 p-4 bg-red-950/20 border border-red-500/20 text-red-400 text-xs font-bold rounded-2xl">
@@ -360,6 +386,7 @@ export default function Institutions() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -7,9 +8,13 @@ import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
-import { Plus, Search, Map, Edit2, Trash2 } from 'lucide-react';
+import { canManage, isAdmin } from '../lib/permissions';
+import { Plus, Search, Map } from 'lucide-react';
 
 export default function Routes() {
+  const { user } = useAuth();
+  const canEditRoutes = canManage(user);
+  const canDeleteRoutes = isAdmin(user);
   const [routes, setRoutes] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +60,11 @@ export default function Routes() {
   }, [contractFilter]);
 
   useEffect(() => {
-    fetchData();
+    void Promise.resolve().then(fetchData);
   }, [fetchData]);
 
   const openAddModal = () => {
+    if (!canEditRoutes) return;
     setEditingRoute(null);
     setFormData({
       contract_id: contracts[0]?.id || '',
@@ -73,6 +79,7 @@ export default function Routes() {
   };
 
   const openEditModal = (route) => {
+    if (!canEditRoutes) return;
     setEditingRoute(route);
     setFormData({
       contract_id: route.contract_id || '',
@@ -87,6 +94,7 @@ export default function Routes() {
   };
 
   const handleDelete = async (id) => {
+    if (!canDeleteRoutes) return;
     if (!window.confirm('Are you sure you want to delete this route?')) return;
     try {
       await api.delete(`/routes/${id}`);
@@ -103,6 +111,7 @@ export default function Routes() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!canEditRoutes) return;
     setSubmitting(true);
     setError('');
 
@@ -153,14 +162,16 @@ export default function Routes() {
             Define pickup points, drop coordinates, routing distance, and verify active status.
           </p>
         </div>
-        <Button
-          onClick={openAddModal}
-          variant="primary"
-          className="self-start sm:self-center"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Route
-        </Button>
+        {canEditRoutes && (
+          <Button
+            onClick={openAddModal}
+            variant="primary"
+            className="self-start sm:self-center"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Route
+          </Button>
+        )}
       </div>
 
       {/* Toolbar */}
@@ -220,7 +231,15 @@ export default function Routes() {
             </div>
           </div>
         ) : (
-          <Table headers={['Route Name', 'Contract No', 'Pickup Points', 'Drop Points', 'Distance', 'Status', 'Actions']}>
+          <Table headers={[
+            'Route Name',
+            'Contract No',
+            'Pickup Points',
+            'Drop Points',
+            'Distance',
+            'Status',
+            ...(canEditRoutes || canDeleteRoutes ? ['Actions'] : []),
+          ]}>
             {filteredRoutes.map((r) => (
               <tr key={r.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                 <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-white">
@@ -243,20 +262,26 @@ export default function Routes() {
                     {r.route_status}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
-                  <button
-                    onClick={() => openEditModal(r)}
-                    className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors cursor-pointer"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(r.id)}
-                    className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
-                  >
-                    Delete
-                  </button>
-                </td>
+                {(canEditRoutes || canDeleteRoutes) && (
+                  <td className="px-6 py-4 whitespace-nowrap text-xs font-bold space-x-4">
+                    {canEditRoutes && (
+                      <button
+                        onClick={() => openEditModal(r)}
+                        className="text-[#8B7CFF] hover:text-[#A78BFA] transition-colors cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                    )}
+                    {canDeleteRoutes && (
+                      <button
+                        onClick={() => handleDelete(r.id)}
+                        className="text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </Table>
@@ -264,6 +289,7 @@ export default function Routes() {
       </div>
 
       {/* Add / Edit Route Modal */}
+      {canEditRoutes && (
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editingRoute ? 'Edit Route' : 'Add Route'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <Select
@@ -345,6 +371,7 @@ export default function Routes() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }

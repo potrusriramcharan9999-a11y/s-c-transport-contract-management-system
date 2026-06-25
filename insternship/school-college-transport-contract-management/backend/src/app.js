@@ -26,7 +26,20 @@ const app = express();
 const morganFormat = process.env.NODE_ENV === "production" ? "combined" : "dev";
 app.use(morgan(morganFormat, { stream: { write: message => logger.info(message.trim()) } }));
 
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "script-src": ["'self'", "https://accounts.google.com"],
+        "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+        "connect-src": ["'self'", "https://accounts.google.com"],
+        "frame-src": ["'self'", "https://accounts.google.com"],
+        "img-src": ["'self'", "data:", "https:"],
+      },
+    },
+  })
+);
 
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -34,9 +47,28 @@ const apiLimiter = rateLimit({
   message: "Too many requests from this IP, please try again later."
 });
 
+const allowedOrigins = env.corsOrigin 
+  ? env.corsOrigin.split(',').map(o => o.trim()) 
+  : ['http://localhost:5173'];
+
 app.use(
   cors({
-    origin: env.corsOrigin,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like curl, postman, mobile apps, or local tests)
+      if (!origin) return callback(null, true);
+      
+      const isAllowed = allowedOrigins.includes(origin) || 
+        (env.nodeEnv === "development" && (origin.startsWith("http://localhost:") || origin.startsWith("http://127.0.0.1:"))) ||
+        origin.endsWith(".vercel.app") ||
+        origin.includes("vercel.app");
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        logger.warn(`Blocked by CORS: ${origin}`);
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true
   })
 );
@@ -91,4 +123,3 @@ app.use(notFoundMiddleware);
 app.use(errorMiddleware);
 
 module.exports = app;
-

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Table from '../components/ui/Table';
+import { canManage } from '../lib/permissions';
 import { 
   Printer, 
   Edit, 
@@ -14,8 +16,7 @@ import {
   Bus, 
   IndianRupee, 
   Bell, 
-  History, 
-  FileText 
+  History
 } from 'lucide-react';
 
 const formatDate = (dateStr) => {
@@ -40,22 +41,33 @@ const formatCurrency = (value) => {
 export default function ContractDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const canEditContracts = canManage(user);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    setLoading(true);
-    api.get(`/contracts/${id}/detail`)
-      .then((res) => {
-        setData(res.data.data || res.data);
-      })
-      .catch((err) => {
-        setError(err.response?.data?.message || 'Failed to load contract details.');
-      })
-      .finally(() => {
-        setLoading(false);
-      });
+    let active = true;
+
+    void Promise.resolve().then(() => {
+      if (!active) return;
+      setLoading(true);
+      api.get(`/contracts/${id}/detail`)
+        .then((res) => {
+          if (active) setData(res.data.data || res.data);
+        })
+        .catch((err) => {
+          if (active) setError(err.response?.data?.message || 'Failed to load contract details.');
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    });
+
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const handlePrint = () => {
@@ -105,12 +117,14 @@ export default function ContractDetail() {
             <Printer className="w-4 h-4 mr-2" />
             Print Spec
           </Button>
-          <Link to={`/contracts/${contract.id}/edit`}>
-            <Button variant="primary">
-              <Edit className="w-4 h-4 mr-2" />
-              Edit Contract
-            </Button>
-          </Link>
+          {canEditContracts && (
+            <Link to={`/contracts/${contract.id}/edit`}>
+              <Button variant="primary">
+                <Edit className="w-4 h-4 mr-2" />
+                Edit Contract
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
 

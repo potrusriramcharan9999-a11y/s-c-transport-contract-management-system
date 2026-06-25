@@ -9,6 +9,7 @@ const envSchema = Joi.object({
   JWT_EXPIRES_IN: Joi.string().default("1d"),
   CORS_ORIGIN: Joi.string().default("http://localhost:5173"),
   ENABLE_CRON: Joi.boolean().default(true),
+  GOOGLE_CLIENT_ID: Joi.string().optional().allow("").description("Google Client ID for authentication"),
 }).unknown();
 
 const { error, value: envVars } = envSchema.validate(process.env);
@@ -25,7 +26,8 @@ const env = {
   jwtSecret: envVars.JWT_SECRET,
   jwtExpiresIn: envVars.JWT_EXPIRES_IN,
   corsOrigin: envVars.CORS_ORIGIN,
-  enableCron: envVars.ENABLE_CRON
+  enableCron: envVars.ENABLE_CRON,
+  googleClientId: envVars.GOOGLE_CLIENT_ID
 };
 
 module.exports = { env };

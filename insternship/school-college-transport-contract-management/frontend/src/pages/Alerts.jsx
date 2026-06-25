@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
+import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
@@ -8,7 +9,8 @@ import Table from '../components/ui/Table';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Modal from '../components/ui/Modal';
-import { Settings, Plus, Bell, RefreshCw, CheckCircle2, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { canManage, isAdmin } from '../lib/permissions';
+import { Settings, Plus, Bell, RefreshCw, CheckCircle2 } from 'lucide-react';
 
 const FILTER_OPTIONS = ['All', 'Pending', 'Sent'];
 const ALERT_TYPES = [
@@ -27,6 +29,9 @@ const formatDate = (dateStr) => {
 };
 
 export default function Alerts() {
+  const { user } = useAuth();
+  const canUpdateAlerts = canManage(user);
+  const canRunAlertEngine = isAdmin(user);
   const [alerts, setAlerts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,6 +69,7 @@ export default function Alerts() {
   }, [filter]);
 
   const handleRunEngine = async () => {
+    if (!canRunAlertEngine) return;
     setRunningEngine(true);
     setError('');
     setEngineResult(null);
@@ -79,11 +85,12 @@ export default function Alerts() {
   };
 
   useEffect(() => {
-    fetchAlerts();
+    void Promise.resolve().then(fetchAlerts);
   }, [fetchAlerts]);
 
   // Load contracts for modal dropdown
   useEffect(() => {
+    if (!canUpdateAlerts) return;
     if (!showModal) return;
     api.get('/contracts')
       .then((res) => {
@@ -92,9 +99,10 @@ export default function Alerts() {
         setContracts(Array.isArray(items) ? items : []);
       })
       .catch(() => setContracts([]));
-  }, [showModal]);
+  }, [canUpdateAlerts, showModal]);
 
   const handleMarkSent = async (id) => {
+    if (!canUpdateAlerts) return;
     setMarkingId(id);
     try {
       await api.patch(`/alerts/${id}/sent`);
@@ -107,6 +115,7 @@ export default function Alerts() {
   };
 
   const openModal = () => {
+    if (!canUpdateAlerts) return;
     setModalForm({ contract_id: '', alert_type: '', message: '' });
     setModalErrors({});
     setModalServerError('');
@@ -128,6 +137,7 @@ export default function Alerts() {
 
   const handleModalSubmit = async (e) => {
     e.preventDefault();
+    if (!canUpdateAlerts) return;
     if (!validateModal()) return;
     setModalLoading(true);
     setModalServerError('');
@@ -150,25 +160,31 @@ export default function Alerts() {
           <h1 className="text-2xl font-bold text-white tracking-tight">System Alerts & Expiry Control</h1>
           <p className="text-xs text-[#94A3B8] mt-1 font-medium">Track contract renewals, fleet insurance timelines, and billing schedules.</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            onClick={handleRunEngine}
-            disabled={runningEngine}
-            variant="secondary"
-          >
-            {runningEngine ? (
-              <RefreshCw className="animate-spin h-4 w-4 mr-2" />
-            ) : (
-              <Settings className="h-4 w-4 mr-2" />
+        {(canRunAlertEngine || canUpdateAlerts) && (
+          <div className="flex gap-2">
+            {canRunAlertEngine && (
+              <Button
+                onClick={handleRunEngine}
+                disabled={runningEngine}
+                variant="secondary"
+              >
+                {runningEngine ? (
+                  <RefreshCw className="animate-spin h-4 w-4 mr-2" />
+                ) : (
+                  <Settings className="h-4 w-4 mr-2" />
+                )}
+                {runningEngine ? 'Processing...' : 'Run Alert Engine'}
+              </Button>
             )}
-            {runningEngine ? 'Processing...' : 'Run Alert Engine'}
-          </Button>
-          
-          <Button onClick={openModal} variant="primary">
-            <Plus className="w-4 h-4 mr-2" />
-            Create Manual Alert
-          </Button>
-        </div>
+
+            {canUpdateAlerts && (
+              <Button onClick={openModal} variant="primary">
+                <Plus className="w-4 h-4 mr-2" />
+                Create Manual Alert
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Expiry Tracking Engine Output */}
@@ -266,12 +282,22 @@ export default function Alerts() {
             <div className="max-w-sm">
               <h3 className="text-sm font-bold text-white">No alerts found</h3>
               <p className="text-xs text-[#94A3B8] mt-1 leading-normal">
-                There are no active alerts in this view. Run the engine to parse database timelines.
+                {canRunAlertEngine
+                  ? 'There are no active alerts in this view. Run the engine to parse database timelines.'
+                  : 'There are no active alerts in this view.'}
               </p>
             </div>
           </div>
         ) : (
-          <Table headers={['Type', 'Message', 'Date', 'Contract', 'Institution', 'Status', 'Action']}>
+          <Table headers={[
+            'Type',
+            'Message',
+            'Date',
+            'Contract',
+            'Institution',
+            'Status',
+            ...(canUpdateAlerts ? ['Action'] : []),
+          ]}>
             {alerts.map((a) => (
               <tr key={a.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -302,20 +328,22 @@ export default function Alerts() {
                     {a.is_sent ? 'Sent' : 'Pending'}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  {!a.is_sent ? (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => handleMarkSent(a.id)}
-                      disabled={markingId === a.id}
-                    >
-                      {markingId === a.id ? 'Updating...' : 'Mark Sent'}
-                    </Button>
-                  ) : (
-                    <span className="text-[#94A3B8]/30 text-xs font-semibold">—</span>
-                  )}
-                </td>
+                {canUpdateAlerts && (
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {!a.is_sent ? (
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => handleMarkSent(a.id)}
+                        disabled={markingId === a.id}
+                      >
+                        {markingId === a.id ? 'Updating...' : 'Mark Sent'}
+                      </Button>
+                    ) : (
+                      <span className="text-[#94A3B8]/30 text-xs font-semibold">-</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </Table>
@@ -323,6 +351,7 @@ export default function Alerts() {
       </div>
 
       {/* Manual Alert Modal */}
+      {canUpdateAlerts && (
       <Modal isOpen={showModal} onClose={closeModal} title="Create Manual Alert">
         {modalServerError && (
           <div className="mb-4 p-4 bg-red-950/20 border border-red-500/20 text-red-400 text-xs font-bold rounded-2xl">
@@ -375,6 +404,7 @@ export default function Alerts() {
           </div>
         </form>
       </Modal>
+      )}
     </div>
   );
 }
