@@ -21,9 +21,9 @@ async function create(data) {
 async function createIfMissing(data) {
   const existing = await query(
     `SELECT id FROM alerts
-     WHERE contract_id = $1 AND alert_type = $2 AND alert_date = $3 AND message = $4
+     WHERE contract_id = $1 AND alert_type = $2 AND is_sent = FALSE
      LIMIT 1`,
-    [data.contract_id, data.alert_type, data.alert_date, data.message]
+    [data.contract_id, data.alert_type]
   );
 
   if (existing.rows[0]) {

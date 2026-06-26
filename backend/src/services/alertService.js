@@ -23,7 +23,7 @@ function todayIsoDate() {
 async function createThresholdAlert({ contractId, type, dueDate, label, institutionName, contractNumber }) {
   const remainingDays = daysUntil(dueDate);
 
-  if (!ALERT_THRESHOLDS.includes(remainingDays)) {
+  if (remainingDays < 0 || remainingDays > 90) {
     return false;
   }
 

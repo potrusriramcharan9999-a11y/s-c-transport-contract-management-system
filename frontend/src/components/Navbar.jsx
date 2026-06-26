@@ -19,7 +19,6 @@ export default function Navbar({ onMenuClick }) {
     if (path === '/payments') return 'Payments';
     if (path === '/alerts') return 'Alerts';
     if (path === '/reports') return 'Reports';
-    if (path === '/audit-logs') return 'Audit Logs';
     if (path === '/settings') return 'Settings';
     return 'Transport Management';
   };

@@ -18,7 +18,6 @@ const Alerts = lazy(() => import('./pages/Alerts'));
 const Reports = lazy(() => import('./pages/Reports'));
 const RouteList = lazy(() => import('./pages/Routes'));
 const Vehicles = lazy(() => import('./pages/Vehicles'));
-const AuditLogs = lazy(() => import('./pages/AuditLogs'));
 const Settings = lazy(() => import('./pages/Settings'));
 
 export default function App() {
@@ -47,7 +46,6 @@ export default function App() {
           <Route path="payments" element={<Payments />} />
           <Route path="alerts" element={<Alerts />} />
           <Route path="reports" element={<Reports />} />
-          <Route path="audit-logs" element={<AuditLogs />} />
           <Route path="settings" element={<Settings />} />
         </Route>
       </Routes>

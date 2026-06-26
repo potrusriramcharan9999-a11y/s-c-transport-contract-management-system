@@ -11,7 +11,6 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const alertRoutes = require("./routes/alertRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const reportRoutes = require("./routes/reportRoutes");
-const auditLogRoutes = require("./routes/auditLogRoutes");
 const systemRoutes = require("./routes/systemRoutes");
 const { env } = require("./config/env");
 const { errorMiddleware, notFoundMiddleware } = require("./middleware/errorMiddleware");
@@ -90,7 +89,6 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/alerts", alertRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reports", reportRoutes);
-app.use("/api/audit-logs", auditLogRoutes);
 app.use("/api/system", systemRoutes);
 
 const fs = require("fs");

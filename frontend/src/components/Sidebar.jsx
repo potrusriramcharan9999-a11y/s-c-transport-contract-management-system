@@ -68,13 +68,6 @@ export default function Sidebar({ open, onClose }) {
     }] : []),
   ];
 
-  if (user?.role === 'ADMIN') {
-    links.push({
-      to: '/audit-logs',
-      label: 'Audit Logs',
-      icon: <Database className="w-5 h-5" />,
-    });
-  }
 
 
   return (

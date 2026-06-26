@@ -97,14 +97,14 @@ export default function Dashboard() {
     {
       title: 'Active Contracts',
       value: summary?.active_contracts ?? 0,
-      trend: '↑ 4% this month',
-      trendType: 'success',
+      trend: 'Active agreements',
+      trendType: 'info',
       icon: <FileText className="h-5 w-5" />,
     },
     {
       title: 'Pending Renewals',
       value: summary?.pending_renewals ?? 0,
-      trend: 'Action required',
+      trend: 'Renewals due soon',
       trendType: 'warning',
       icon: <RefreshCw className="h-5 w-5" />,
     },
@@ -118,8 +118,8 @@ export default function Dashboard() {
     {
       title: 'Monthly Revenue',
       value: summary?.total_revenue ? `₹${Number(summary.total_revenue).toLocaleString('en-IN')}` : '₹0',
-      trend: 'Total Collections',
-      trendType: 'success',
+      trend: 'Total processed collections',
+      trendType: 'info',
       icon: <CreditCard className="h-5 w-5" />,
     },
   ];

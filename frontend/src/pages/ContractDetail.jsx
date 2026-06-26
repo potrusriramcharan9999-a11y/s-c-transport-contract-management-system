@@ -15,8 +15,7 @@ import {
   Map, 
   Bus, 
   IndianRupee, 
-  Bell, 
-  History
+  Bell
 } from 'lucide-react';
 
 const formatDate = (dateStr) => {
@@ -96,7 +95,7 @@ export default function ContractDetail() {
     );
   }
 
-  const { contract, payments, routes, vehicles, alerts, auditLogs } = data;
+  const { contract, payments, routes, vehicles, alerts } = data;
 
   return (
     <div className="space-y-6 print:space-y-6 max-w-7xl mx-auto pb-12 text-white animate-fade-in">
@@ -298,63 +297,7 @@ export default function ContractDetail() {
         )}
       </Card>
 
-      {/* Action History (Audit Log) */}
-      <Card className="p-6 space-y-4 bg-[#121827]/40 border border-white/5 shadow-2xl backdrop-blur-md print:break-before-page">
-        <h3 className="text-xs font-black text-[#A78BFA] uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-2">
-          <History className="w-4 h-4 text-[#8B7CFF]" />
-          Action History (Audit Log)
-        </h3>
-        {auditLogs.length === 0 ? (
-          <p className="text-xs text-[#94A3B8]/60 font-semibold py-4">No modifications logged for this contract.</p>
-        ) : (
-          <Table headers={['Action', 'User', 'Date', 'Changes (Old → New)']}>
-            {auditLogs.map((log) => {
-              const hasOld = log.old_value && Object.keys(log.old_value).length > 0;
-              const hasNew = log.new_value && Object.keys(log.new_value).length > 0;
-              
-              return (
-                <tr key={log.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <Badge variant={
-                      log.action === 'CREATE' ? 'success' :
-                      log.action === 'UPDATE' ? 'info' : 'danger'
-                    }>
-                      {log.action}
-                    </Badge>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold text-white">{log.user_name || 'System'}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-xs text-[#94A3B8]/80 font-bold">{formatDate(log.created_at)}</td>
-                  <td className="px-6 py-4 text-xs font-medium max-w-md">
-                    {log.action === 'UPDATE' && hasOld && hasNew ? (
-                      <div className="space-y-1">
-                        {Object.keys(log.new_value).map((key) => {
-                          const oldVal = log.old_value[key];
-                          const newVal = log.new_value[key];
-                          if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-                            return (
-                              <div key={key} className="truncate text-xs">
-                                <span className="font-bold text-[#94A3B8]/70">{key}:</span>{' '}
-                                <span className="text-[#EF4444] line-through font-semibold">{String(oldVal)}</span>
-                                {' → '}
-                                <span className="text-[#22C55E] font-bold">{String(newVal)}</span>
-                              </div>
-                            );
-                          }
-                          return null;
-                        })}
-                      </div>
-                    ) : log.action === 'CREATE' ? (
-                      <span className="text-[#94A3B8] font-semibold">Record Created</span>
-                    ) : (
-                      <span className="text-[#94A3B8] font-semibold">—</span>
-                    )}
-                  </td>
-                </tr>
-              );
-            })}
-          </Table>
-        )}
-      </Card>
+
     </div>
   );
 }

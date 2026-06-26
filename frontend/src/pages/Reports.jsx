@@ -12,7 +12,6 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import { 
-  Download, 
   FileText, 
   RefreshCw, 
   AlertTriangle, 
@@ -26,7 +25,7 @@ const formatCurrency = (value) => {
 
 export default function Reports() {
   const { user } = useAuth();
-  const canExportReports = canManage(user);
+
   const [revenueTrend, setRevenueTrend] = useState([]);
   const [contractStatus, setContractStatus] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -71,19 +70,7 @@ export default function Reports() {
       .catch((err) => console.error('Failed to load KPI summaries:', err));
   }, []);
 
-  const handleExportCSV = () => {
-    let url = '/api/reports/export?type=csv';
-    if (startDate) url += `&startDate=${startDate}`;
-    if (endDate) url += `&endDate=${endDate}`;
-    window.open(url, '_blank');
-  };
 
-  const handleExportPDF = () => {
-    let url = '/api/reports/export?type=pdf';
-    if (startDate) url += `&startDate=${startDate}`;
-    if (endDate) url += `&endDate=${endDate}`;
-    window.open(url, '_blank');
-  };
 
   const handleClearFilters = () => {
     setStartDate('');
@@ -131,24 +118,6 @@ export default function Reports() {
             Review organizational metrics, financial trends, and contract distribution profiles.
           </p>
         </div>
-        {canExportReports && (
-          <div className="flex gap-2">
-            <Button
-              onClick={handleExportCSV}
-              variant="secondary"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export CSV
-            </Button>
-            <Button
-              onClick={handleExportPDF}
-              variant="primary"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Export PDF
-            </Button>
-          </div>
-        )}
       </div>
 
       {/* KPI Cards */}
