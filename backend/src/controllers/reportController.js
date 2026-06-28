@@ -1,5 +1,6 @@
 const PDFDocument = require("pdfkit");
 const reportModel = require("../models/reportModel");
+const contractModel = require("../models/contractModel");
 const { toCsv } = require("../utils/csv");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { success } = require("../utils/apiResponse");
@@ -12,12 +13,14 @@ const revenueTrend = asyncHandler(async (req, res) => {
 });
 
 const contractStatus = asyncHandler(async (req, res) => {
+  await contractModel.updateDerivedStatuses();
   const { startDate, endDate } = req.query;
   const report = await reportModel.contractStatus(startDate, endDate);
   return success(res, report);
 });
 
 const exportReport = asyncHandler(async (req, res) => {
+  await contractModel.updateDerivedStatuses();
   const format = req.query.type || "csv";
   const reportType = req.query.report || "revenue-trend";
   const { startDate, endDate } = req.query;
