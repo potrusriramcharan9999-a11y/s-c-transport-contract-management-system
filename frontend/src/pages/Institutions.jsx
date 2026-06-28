@@ -25,7 +25,7 @@ const EMPTY_FORM = {
 export default function Institutions() {
   const { user } = useAuth();
   const canEditInstitutions = canManage(user);
-  const canDeleteInstitutions = isAdmin(user);
+  const canDeleteInstitutions = canManage(user);
   // --- State ---
   const [institutions, setInstitutions] = useState([]);
   const [page, setPage] = useState(1);

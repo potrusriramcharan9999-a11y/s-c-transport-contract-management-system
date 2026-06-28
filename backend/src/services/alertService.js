@@ -23,11 +23,15 @@ function todayIsoDate() {
 async function createThresholdAlert({ contractId, type, dueDate, label, institutionName, contractNumber }) {
   const remainingDays = daysUntil(dueDate);
 
-  if (remainingDays < 0 || remainingDays > 90) {
+  if (remainingDays < -90 || remainingDays > 90) {
     return false;
   }
 
-  const message = `${label} for ${institutionName || "institution"} contract ${contractNumber || ""} is due in ${remainingDays} days.`;
+  const daysText = remainingDays < 0 
+    ? `was due ${Math.abs(remainingDays)} days ago` 
+    : `is due in ${remainingDays} days`;
+
+  const message = `${label} for ${institutionName || "institution"} contract ${contractNumber || ""} ${daysText}.`;
 
   const result = await alertModel.createIfMissing({
     contract_id: contractId,
@@ -53,16 +57,7 @@ async function scanContracts() {
       contractNumber: contract.contract_number
     });
 
-    const expiryCreated = await createThresholdAlert({
-      contractId: contract.id,
-      type: "EXPIRY",
-      dueDate: contract.end_date,
-      label: "Expiry",
-      institutionName: contract.institution_name,
-      contractNumber: contract.contract_number
-    });
-
-    createdCount += Number(renewalCreated) + Number(expiryCreated);
+    createdCount += Number(renewalCreated);
   }
 
   return createdCount;
@@ -126,19 +121,21 @@ async function runAlertEngine() {
   await contractModel.updateDerivedStatuses();
 
   const contractAlertsCreated = await scanContracts();
-  const vehicleAlertsCreated = await scanVehicles();
-  const paymentResult = await scanOverduePayments();
 
   return {
     contractAlertsCreated,
-    vehicleAlertsCreated,
-    ...paymentResult,
+    vehicleAlertsCreated: 0,
+    overduePaymentsUpdated: 0,
+    paymentAlertsCreated: 0,
     ranAt: new Date().toISOString()
   };
 }
 
 module.exports = {
   runAlertEngine,
+  scanContracts,
+  scanVehicles,
+  scanOverduePayments,
   ALERT_THRESHOLDS
 };
 

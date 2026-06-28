@@ -10,7 +10,7 @@ router.get("/", routeController.getRoutes);
 router.get("/:id", routeController.getRoute);
 router.post("/", requireRole("ADMIN", "STAFF"), routeController.createRoute);
 router.put("/:id", requireRole("ADMIN", "STAFF"), routeController.updateRoute);
-router.delete("/:id", requireRole("ADMIN"), routeController.deleteRoute);
+router.delete("/:id", requireRole("ADMIN", "STAFF"), routeController.deleteRoute);
 
 module.exports = router;
 

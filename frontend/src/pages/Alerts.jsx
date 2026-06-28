@@ -15,9 +15,6 @@ import { Settings, Plus, Bell, RefreshCw, CheckCircle2 } from 'lucide-react';
 const FILTER_OPTIONS = ['All', 'Pending', 'Sent'];
 const ALERT_TYPES = [
   { value: 'RENEWAL', label: 'Renewal' },
-  { value: 'EXPIRY', label: 'Expiry' },
-  { value: 'PAYMENT_DUE', label: 'Payment Due' },
-  { value: 'INSURANCE_EXPIRY', label: 'Insurance Expiry' },
 ];
 
 const formatDate = (dateStr) => {

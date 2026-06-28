@@ -36,7 +36,7 @@ async function createIfMissing(data) {
 
 async function findAll({ status }) {
   const values = [];
-  const filters = [];
+  const filters = ["a.alert_type = 'RENEWAL'"];
 
   if (status === "sent") {
     filters.push("a.is_sent = TRUE");
@@ -77,7 +77,7 @@ async function upcoming(limit = 10) {
        FROM alerts a
        JOIN contracts c ON c.id = a.contract_id
        LEFT JOIN institutions i ON i.id = c.institution_id
-       WHERE a.is_sent = FALSE
+       WHERE a.is_sent = FALSE AND a.alert_type = 'RENEWAL'
      ),
      contract_renewals AS (
        SELECT
@@ -93,84 +93,17 @@ async function upcoming(limit = 10) {
          i.institution_name
        FROM contracts c
        LEFT JOIN institutions i ON i.id = c.institution_id
-       WHERE c.status IN ('ACTIVE', 'PENDING_RENEWAL')
+       WHERE c.status = 'PENDING_RENEWAL'
          AND c.renewal_date <= CURRENT_DATE + INTERVAL '90 days'
          AND NOT EXISTS (
            SELECT 1 FROM generated_alerts ga
            WHERE ga.contract_id = c.id AND ga.alert_type = 'RENEWAL'
-         )
-     ),
-     contract_expiries AS (
-       SELECT
-         CONCAT('contract-expiry-', c.id)::text AS id,
-         c.id AS contract_id,
-         'EXPIRY' AS alert_type,
-         c.end_date AS alert_date,
-         CONCAT('Contract ', c.contract_number, ' expires on ', TO_CHAR(c.end_date, 'DD Mon YYYY'), '.') AS message,
-         FALSE AS is_sent,
-         NULL::timestamp AS sent_at,
-         CURRENT_TIMESTAMP AS created_at,
-         c.contract_number,
-         i.institution_name
-       FROM contracts c
-       LEFT JOIN institutions i ON i.id = c.institution_id
-       WHERE c.status IN ('ACTIVE', 'PENDING_RENEWAL')
-         AND c.end_date <= CURRENT_DATE + INTERVAL '90 days'
-         AND NOT EXISTS (
-           SELECT 1 FROM generated_alerts ga
-           WHERE ga.contract_id = c.id AND ga.alert_type = 'EXPIRY'
-         )
-     ),
-     vehicle_expiries AS (
-       SELECT
-         CONCAT('vehicle-insurance-', v.id)::text AS id,
-         v.contract_id,
-         'INSURANCE_EXPIRY' AS alert_type,
-         v.insurance_expiry AS alert_date,
-         CONCAT('Insurance for vehicle ', v.vehicle_number, ' expires on ', TO_CHAR(v.insurance_expiry, 'DD Mon YYYY'), '.') AS message,
-         FALSE AS is_sent,
-         NULL::timestamp AS sent_at,
-         CURRENT_TIMESTAMP AS created_at,
-         c.contract_number,
-         i.institution_name
-       FROM vehicles v
-       JOIN contracts c ON c.id = v.contract_id
-       LEFT JOIN institutions i ON i.id = c.institution_id
-       WHERE v.insurance_expiry <= CURRENT_DATE + INTERVAL '90 days'
-         AND NOT EXISTS (
-           SELECT 1 FROM generated_alerts ga
-           WHERE ga.contract_id = v.contract_id AND ga.alert_type = 'INSURANCE_EXPIRY'
-         )
-     ),
-     payment_due AS (
-       SELECT
-         CONCAT('payment-due-', p.id)::text AS id,
-         p.contract_id,
-         'PAYMENT_DUE' AS alert_type,
-         p.due_date AS alert_date,
-         CONCAT('Invoice ', p.invoice_number, ' is ', LOWER(p.payment_status), ' with amount ', p.amount, '.') AS message,
-         FALSE AS is_sent,
-         NULL::timestamp AS sent_at,
-         CURRENT_TIMESTAMP AS created_at,
-         c.contract_number,
-         i.institution_name
-       FROM payments p
-       JOIN contracts c ON c.id = p.contract_id
-       LEFT JOIN institutions i ON i.id = c.institution_id
-       WHERE p.payment_status IN ('UNPAID', 'OVERDUE')
-         AND p.due_date <= CURRENT_DATE + INTERVAL '30 days'
-         AND NOT EXISTS (
-           SELECT 1 FROM generated_alerts ga
-           WHERE ga.contract_id = p.contract_id AND ga.alert_type = 'PAYMENT_DUE'
          )
      )
      SELECT *
      FROM (
        SELECT * FROM generated_alerts
        UNION ALL SELECT * FROM contract_renewals
-       UNION ALL SELECT * FROM contract_expiries
-       UNION ALL SELECT * FROM vehicle_expiries
-       UNION ALL SELECT * FROM payment_due
      ) active_alerts
      ORDER BY alert_date ASC, created_at DESC
      LIMIT $1`,

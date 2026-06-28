@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
@@ -421,6 +422,7 @@ export default function Payments() {
 
             <Table headers={[
               'Payment ID',
+              'Contract',
               'Institution',
               'Amount',
               'Due Date',
@@ -433,6 +435,15 @@ export default function Payments() {
                   <tr key={p.id} className="hover:bg-white/5 transition-colors border-b border-white/5 last:border-0">
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-white">
                       {p.invoice_number || '—'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-xs font-bold text-[#8B7CFF] hover:text-[#A78BFA] transition-colors">
+                      {p.contract_id ? (
+                        <Link to={`/contracts/${p.contract_id}`} className="hover:underline">
+                          {p.contract_number || 'View Contract'}
+                        </Link>
+                      ) : (
+                        p.contract_number || '—'
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-xs font-semibold text-[#94A3B8]">
                       {p.institution_name || p.Contract?.Institution?.institution_name || '—'}

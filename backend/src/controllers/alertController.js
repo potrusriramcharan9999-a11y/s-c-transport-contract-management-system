@@ -1,4 +1,5 @@
 const alertModel = require("../models/alertModel");
+const { runAlertEngine } = require("../services/alertService");
 const { recordAudit } = require("../middleware/auditMiddleware");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { AppError } = require("../utils/appError");
@@ -24,11 +25,13 @@ const createManualAlert = asyncHandler(async (req, res) => {
 });
 
 const getAlerts = asyncHandler(async (req, res) => {
+  await runAlertEngine();
   const alerts = await alertModel.findAll({ status: req.query.status });
   return success(res, alerts);
 });
 
 const getUpcomingAlerts = asyncHandler(async (req, res) => {
+  await runAlertEngine();
   const alerts = await alertModel.upcoming(Number(req.query.limit || 10));
   return success(res, alerts);
 });

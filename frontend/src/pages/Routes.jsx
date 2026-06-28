@@ -14,7 +14,7 @@ import { Plus, Search, Map } from 'lucide-react';
 export default function Routes() {
   const { user } = useAuth();
   const canEditRoutes = canManage(user);
-  const canDeleteRoutes = isAdmin(user);
+  const canDeleteRoutes = canManage(user);
   const [routes, setRoutes] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);

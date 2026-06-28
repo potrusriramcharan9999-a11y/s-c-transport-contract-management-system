@@ -35,7 +35,7 @@ const formatCurrency = (value) => {
 export default function Contracts() {
   const { user } = useAuth();
   const canEditContracts = canManage(user);
-  const canDeleteContracts = isAdmin(user);
+  const canDeleteContracts = canManage(user);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

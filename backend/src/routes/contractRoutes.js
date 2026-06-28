@@ -11,7 +11,7 @@ router.get("/:id", contractController.getContract);
 router.get("/:id/detail", contractController.getContractDetail);
 router.post("/", requireRole("ADMIN", "STAFF"), contractController.createContract);
 router.put("/:id", requireRole("ADMIN", "STAFF"), contractController.updateContract);
-router.delete("/:id", requireRole("ADMIN"), contractController.deleteContract);
+router.delete("/:id", requireRole("ADMIN", "STAFF"), contractController.deleteContract);
 
 module.exports = router;
 

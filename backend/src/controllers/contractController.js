@@ -63,6 +63,7 @@ const createContract = asyncHandler(async (req, res) => {
 });
 
 const getContracts = asyncHandler(async (req, res) => {
+  await contractModel.updateDerivedStatuses();
   const { limit, offset, page } = getPagination(req.query);
   const contracts = await contractModel.findAll({
     limit,
@@ -75,6 +76,7 @@ const getContracts = asyncHandler(async (req, res) => {
 });
 
 const getContract = asyncHandler(async (req, res) => {
+  await contractModel.updateDerivedStatuses();
   const contract = await contractModel.findById(req.params.id);
   if (!contract) {
     throw new AppError("Contract not found", 404);
@@ -124,6 +126,7 @@ const deleteContract = asyncHandler(async (req, res) => {
 });
 
 const getContractDetail = asyncHandler(async (req, res) => {
+  await contractModel.updateDerivedStatuses();
   const contractId = req.params.id;
   const contract = await contractModel.findById(contractId);
   if (!contract) {

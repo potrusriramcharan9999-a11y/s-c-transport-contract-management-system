@@ -112,7 +112,7 @@ async function findForAlertScan() {
     `SELECT c.*, i.institution_name
      FROM contracts c
      LEFT JOIN institutions i ON i.id = c.institution_id
-     WHERE c.status IN ('ACTIVE', 'PENDING_RENEWAL')`
+     WHERE c.status = 'PENDING_RENEWAL'`
   );
   return result.rows;
 }
@@ -121,15 +121,32 @@ async function updateDerivedStatuses() {
   await query(
     `UPDATE contracts
      SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP
-     WHERE end_date < CURRENT_DATE AND status != 'TERMINATED'`
+     WHERE end_date < CURRENT_DATE 
+       AND status NOT IN ('TERMINATED', 'EXPIRED')`
   );
 
   await query(
     `UPDATE contracts
      SET status = 'PENDING_RENEWAL', updated_at = CURRENT_TIMESTAMP
-     WHERE renewal_date <= CURRENT_DATE + INTERVAL '30 days'
+     WHERE renewal_date <= CURRENT_DATE
        AND end_date >= CURRENT_DATE
-       AND status = 'ACTIVE'`
+       AND status NOT IN ('TERMINATED', 'PENDING_RENEWAL')`
+  );
+
+  await query(
+    `UPDATE contracts
+     SET status = 'ACTIVE', updated_at = CURRENT_TIMESTAMP
+     WHERE renewal_date > CURRENT_DATE
+       AND end_date >= CURRENT_DATE
+       AND status IN ('PENDING_RENEWAL', 'EXPIRED')`
+  );
+
+  // Clean up any un-sent renewal alerts for ACTIVE contracts
+  await query(
+    `DELETE FROM alerts
+     WHERE alert_type = 'RENEWAL'
+       AND is_sent = FALSE
+       AND contract_id IN (SELECT id FROM contracts WHERE status = 'ACTIVE')`
   );
 }
 

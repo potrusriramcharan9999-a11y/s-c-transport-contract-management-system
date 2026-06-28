@@ -10,7 +10,7 @@ router.get("/", institutionController.getInstitutions);
 router.get("/:id", institutionController.getInstitution);
 router.post("/", requireRole("ADMIN", "STAFF"), institutionController.createInstitution);
 router.put("/:id", requireRole("ADMIN", "STAFF"), institutionController.updateInstitution);
-router.delete("/:id", requireRole("ADMIN"), institutionController.deleteInstitution);
+router.delete("/:id", requireRole("ADMIN", "STAFF"), institutionController.deleteInstitution);
 
 module.exports = router;
 

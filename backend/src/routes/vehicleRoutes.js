@@ -10,7 +10,7 @@ router.get("/", vehicleController.getVehicles);
 router.get("/:id", vehicleController.getVehicle);
 router.post("/", requireRole("ADMIN", "STAFF"), vehicleController.createVehicle);
 router.put("/:id", requireRole("ADMIN", "STAFF"), vehicleController.updateVehicle);
-router.delete("/:id", requireRole("ADMIN"), vehicleController.deleteVehicle);
+router.delete("/:id", requireRole("ADMIN", "STAFF"), vehicleController.deleteVehicle);
 
 module.exports = router;
 

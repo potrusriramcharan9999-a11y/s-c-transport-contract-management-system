@@ -109,6 +109,15 @@ app.get("*", (req, res, next) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
+    // If root route is accessed but frontend is not built on this host, return a friendly confirmation JSON
+    if (req.path === "/") {
+      return res.json({
+        success: true,
+        message: "Transport Contract Management API Server is running successfully.",
+        environment: env.nodeEnv,
+        health: "/health"
+      });
+    }
     res.status(404).json({
       success: false,
       message: "API Route not found (Frontend static files are not built on this host)."

@@ -22,7 +22,7 @@ const formatDate = (dateStr) => {
 export default function Vehicles() {
   const { user } = useAuth();
   const canEditVehicles = canManage(user);
-  const canDeleteVehicles = isAdmin(user);
+  const canDeleteVehicles = canManage(user);
   const [vehicles, setVehicles] = useState([]);
   const [contracts, setContracts] = useState([]);
   const [loading, setLoading] = useState(true);
