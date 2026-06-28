@@ -37,16 +37,34 @@ export default function Dashboard() {
 
     const fetchData = async () => {
       const unwrap = (response) => response.data?.data || response.data || [];
-      const [summaryRes, revenueRes, alertsRes] = await Promise.allSettled([
+      const [summaryRes, revenueRes, alertsRes, contractsRes] = await Promise.allSettled([
         api.get('/dashboard/summary'),
         api.get('/dashboard/revenue-chart'),
         api.get('/alerts/upcoming', { params: { limit: 10 } }),
+        api.get('/contracts', { params: { limit: 1000 } })
       ]);
 
       if (!isMounted) return;
 
+      let calculatedActive = 0;
+      let calculatedPending = 0;
+
+      if (contractsRes.status === 'fulfilled') {
+        const body = unwrap(contractsRes.value);
+        const items = body.items || body || [];
+        if (Array.isArray(items)) {
+          calculatedActive = items.filter(c => c.status === 'ACTIVE').length;
+          calculatedPending = items.filter(c => c.status === 'PENDING_RENEWAL').length;
+        }
+      }
+
       if (summaryRes.status === 'fulfilled') {
-        setSummary(unwrap(summaryRes.value));
+        const rawSummary = unwrap(summaryRes.value);
+        setSummary({
+          ...rawSummary,
+          active_contracts: calculatedActive,
+          pending_renewals: calculatedPending
+        });
       } else {
         console.error('Failed to fetch dashboard summary:', summaryRes.reason);
       }

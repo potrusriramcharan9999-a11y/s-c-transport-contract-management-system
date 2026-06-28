@@ -63,11 +63,34 @@ export default function Reports() {
 
   // Load summary KPI numbers
   useEffect(() => {
-    api.get('/dashboard/summary')
-      .then((res) => {
-        setSummary(res.data.data || res.data);
-      })
-      .catch((err) => console.error('Failed to load KPI summaries:', err));
+    const loadSummary = async () => {
+      try {
+        const [summaryRes, contractsRes] = await Promise.all([
+          api.get('/dashboard/summary'),
+          api.get('/contracts', { params: { limit: 1000 } })
+        ]);
+        
+        const rawSummary = summaryRes.data.data || summaryRes.data || {};
+        const contractsBody = contractsRes.data.data || contractsRes.data || {};
+        const items = contractsBody.items || contractsBody || [];
+        
+        let calculatedActive = 0;
+        let calculatedPending = 0;
+        if (Array.isArray(items)) {
+          calculatedActive = items.filter(c => c.status === 'ACTIVE').length;
+          calculatedPending = items.filter(c => c.status === 'PENDING_RENEWAL').length;
+        }
+
+        setSummary({
+          ...rawSummary,
+          active_contracts: calculatedActive,
+          pending_renewals: calculatedPending
+        });
+      } catch (err) {
+        console.error('Failed to load KPI summaries:', err);
+      }
+    };
+    void loadSummary();
   }, []);
 
 
