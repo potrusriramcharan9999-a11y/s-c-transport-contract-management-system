@@ -2,7 +2,7 @@ const routeModel = require("../models/routeModel");
 const { recordAudit } = require("../middleware/auditMiddleware");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { AppError } = require("../utils/appError");
-const { success, message } = require("../utils/apiResponse");
+const { success, apiMessage } = require("../utils/apiResponse");
 
 const createRoute = asyncHandler(async (req, res) => {
   const required = ["contract_id", "route_name", "pickup_points", "drop_points", "distance_km"];
@@ -52,7 +52,7 @@ const deleteRoute = asyncHandler(async (req, res) => {
 
   await recordAudit({ req, entityType: "ROUTE", entityId: oldValue.id, action: "DELETE", oldValue });
 
-  return message(res, "Route deleted");
+  return apiMessage(res, "Route deleted");
 });
 
 module.exports = {

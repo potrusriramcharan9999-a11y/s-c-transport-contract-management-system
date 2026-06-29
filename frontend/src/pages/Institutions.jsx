@@ -130,6 +130,8 @@ export default function Institutions() {
     }
     try {
       await api.delete(`/institutions/${id}`);
+      setInstitutions((prev) => prev.filter((i) => i.id !== id));
+      alert('Deleted successfully.');
       fetchInstitutions();
     } catch (err) {
       console.error('Failed to delete institution:', err);

@@ -2,7 +2,7 @@ const vehicleModel = require("../models/vehicleModel");
 const { recordAudit } = require("../middleware/auditMiddleware");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { AppError } = require("../utils/appError");
-const { success, message } = require("../utils/apiResponse");
+const { success, apiMessage } = require("../utils/apiResponse");
 
 const createVehicle = asyncHandler(async (req, res) => {
   const required = ["contract_id", "vehicle_number", "vehicle_type", "capacity", "insurance_expiry"];
@@ -52,7 +52,7 @@ const deleteVehicle = asyncHandler(async (req, res) => {
 
   await recordAudit({ req, entityType: "VEHICLE", entityId: oldValue.id, action: "DELETE", oldValue });
 
-  return message(res, "Vehicle deleted");
+  return apiMessage(res, "Vehicle deleted");
 });
 
 module.exports = {

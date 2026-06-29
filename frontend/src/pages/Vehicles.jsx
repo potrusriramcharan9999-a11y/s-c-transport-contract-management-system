@@ -108,10 +108,15 @@ export default function Vehicles() {
     if (!canDeleteVehicles) return;
     if (!window.confirm('Are you sure you want to delete this vehicle?')) return;
     try {
+      setError('');
       await api.delete(`/vehicles/${id}`);
+      setVehicles((prev) => prev.filter((v) => v.id !== id));
+      alert('Deleted successfully.');
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete vehicle.');
+      const errMsg = err.response?.data?.message || 'Failed to delete vehicle.';
+      setError(errMsg);
+      alert('Delete failed: ' + errMsg);
     }
   };
 

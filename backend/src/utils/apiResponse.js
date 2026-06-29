@@ -14,7 +14,7 @@ function failure(res, messageText = "Error", statusCode = 400, error = {}) {
   });
 }
 
-function message(res, messageText = "Done", statusCode = 200) {
+function apiMessage(res, messageText = "Done", statusCode = 200) {
   return res.status(statusCode).json({
     success: true,
     message: messageText
@@ -24,6 +24,6 @@ function message(res, messageText = "Done", statusCode = 200) {
 module.exports = {
   success,
   failure,
-  message
+  apiMessage
 };
 

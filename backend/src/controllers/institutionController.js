@@ -2,7 +2,7 @@ const institutionModel = require("../models/institutionModel");
 const { recordAudit } = require("../middleware/auditMiddleware");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { AppError } = require("../utils/appError");
-const { success, message } = require("../utils/apiResponse");
+const { success, apiMessage } = require("../utils/apiResponse");
 const { getPagination } = require("../utils/pagination");
 
 const createInstitution = asyncHandler(async (req, res) => {
@@ -84,7 +84,7 @@ const deleteInstitution = asyncHandler(async (req, res) => {
     oldValue
   });
 
-  return message(res, "Institution deleted");
+  return apiMessage(res, "Institution deleted");
 });
 
 module.exports = {

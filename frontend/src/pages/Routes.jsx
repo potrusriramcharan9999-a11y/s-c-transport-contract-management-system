@@ -97,10 +97,15 @@ export default function Routes() {
     if (!canDeleteRoutes) return;
     if (!window.confirm('Are you sure you want to delete this route?')) return;
     try {
+      setError('');
       await api.delete(`/routes/${id}`);
+      setRoutes((prev) => prev.filter((r) => r.id !== id));
+      alert('Deleted successfully.');
       fetchData();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete route.');
+      const errMsg = err.response?.data?.message || 'Failed to delete route.';
+      setError(errMsg);
+      alert('Delete failed: ' + errMsg);
     }
   };
 

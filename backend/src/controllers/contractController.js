@@ -2,7 +2,7 @@ const contractModel = require("../models/contractModel");
 const { recordAudit } = require("../middleware/auditMiddleware");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { AppError } = require("../utils/appError");
-const { success, message } = require("../utils/apiResponse");
+const { success, apiMessage } = require("../utils/apiResponse");
 const { getPagination } = require("../utils/pagination");
 
 function validateContract(data) {
@@ -122,7 +122,7 @@ const deleteContract = asyncHandler(async (req, res) => {
     oldValue
   });
 
-  return message(res, "Contract deleted");
+  return apiMessage(res, "Contract deleted");
 });
 
 const getContractDetail = asyncHandler(async (req, res) => {

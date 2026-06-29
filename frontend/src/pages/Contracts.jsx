@@ -77,10 +77,15 @@ export default function Contracts() {
     if (!canDeleteContracts) return;
     if (!window.confirm('Are you sure you want to delete this contract? This action cannot be undone.')) return;
     try {
+      setError('');
       await api.delete(`/contracts/${id}`);
+      setContracts((prev) => prev.filter((c) => c.id !== id));
+      alert('Deleted successfully.');
       fetchContracts();
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete contract.');
+      const errMsg = err.response?.data?.message || 'Failed to delete contract.';
+      setError(errMsg);
+      alert('Delete failed: ' + errMsg);
     }
   };
 

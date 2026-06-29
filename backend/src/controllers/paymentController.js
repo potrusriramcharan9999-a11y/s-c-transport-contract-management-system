@@ -2,7 +2,7 @@ const paymentModel = require("../models/paymentModel");
 const { recordAudit } = require("../middleware/auditMiddleware");
 const { asyncHandler } = require("../utils/asyncHandler");
 const { AppError } = require("../utils/appError");
-const { success, message } = require("../utils/apiResponse");
+const { success, apiMessage } = require("../utils/apiResponse");
 
 const allowedStatuses = ["UNPAID", "PAID", "OVERDUE"];
 
@@ -80,7 +80,7 @@ const deletePayment = asyncHandler(async (req, res) => {
 
   await recordAudit({ req, entityType: "PAYMENT", entityId: oldValue.id, action: "DELETE", oldValue });
 
-  return message(res, "Payment deleted");
+  return apiMessage(res, "Payment deleted");
 });
 
 module.exports = {
