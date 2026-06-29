@@ -79,6 +79,21 @@ app.get("/health", (req, res) => {
   res.json({ success: true, message: "API is healthy" });
 });
 
+app.get("/health-check", (req, res) => {
+  const apiResObj = require("./utils/apiResponse");
+  const contractController = require("./controllers/contractController");
+  res.json({
+    success: true,
+    apiResponseKeys: Object.keys(apiResObj),
+    apiResponseTypeofMessage: typeof apiResObj.message,
+    apiResponseTypeofApiMessage: typeof apiResObj.apiMessage,
+    contractControllerKeys: Object.keys(contractController),
+    contractControllerDeleteContractType: typeof contractController.deleteContract,
+    serverTime: new Date().toISOString(),
+    nodeEnv: env.nodeEnv
+  });
+});
+
 // ----- API Routes -----
 app.use("/api/auth", authRoutes);
 app.use("/api/institutions", institutionRoutes);
